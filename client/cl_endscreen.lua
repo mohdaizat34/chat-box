@@ -276,7 +276,105 @@ function ShowEndScreen()
 end
 
 
+--file browser 
+local function OpenBackgroundChanger()
+    -- Create the frame
+    local frame = vgui.Create("DFrame")
+    frame:SetSize(400, 300)
+    frame:Center()
+    frame:SetTitle("Background Changer")
+    frame:MakePopup()
 
+    -- Create a FileBrowser to browse materials
+    local fileBrowser = vgui.Create("DFileBrowser", frame)
+    fileBrowser:Dock(FILL)
+    fileBrowser:SetPath("GAME") -- Look in Garry's Mod files
+    fileBrowser:SetBaseFolder("materials") -- Set base folder to materials
+    fileBrowser:SetFileTypes("*.png;*.vtf;*.vmt") -- Look for image files
+    fileBrowser:SetOpen(true)
+
+    -- Create a button to set the selected background
+    local setButton = vgui.Create("DButton", frame)
+    setButton:SetText("Set Background")
+    setButton:Dock(BOTTOM)
+
+    -- Store the selected file path
+    local selectedFile = ""
+
+    -- Update the selected file when a file is clicked
+    fileBrowser.OnSelect = function(_, path)
+        selectedFile = path
+    end
+
+    -- Set the background when the button is clicked
+    setButton.DoClick = function()
+        if selectedFile == "" then return end -- Ensure a file is selected
+
+        -- Change the background using the selected material
+        hook.Add("HUDPaintBackground", "CustomBackground", function()
+            surface.SetDrawColor(255, 255, 255, 255)
+            surface.SetMaterial(Material(selectedFile)) -- Set the material
+            surface.DrawTexturedRect(0, 0, ScrW(), ScrH()) -- Draw it across the entire screen
+        end)
+
+        frame:Close() -- Close the panel after setting the background
+    end
+end
+
+
+-- set timer
+local function OpenSetTimer()
+
+    local frame = vgui.Create("DFrame")
+    frame:SetSize(300, 100)
+    frame:Center()
+    frame:SetTitle("Enter a Number")
+    frame:MakePopup()
+    frame.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
+        draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) -- Draw a black box instead of the frame
+    end
+    
+    function frame:Init() 
+        self.startTime = SysTime() 
+    end    
+    function frame:Paint() 
+        Derma_DrawBackgroundBlur( self, self.startTime ) 
+    end
+
+    function frame:OnClose() 
+        timer.Stop(reconnectTimer)
+    end 
+    
+    local numberEntry = vgui.Create("DTextEntry", frame)
+    numberEntry:SetSize(200, 30)
+    numberEntry:SetPos(50, 40)
+    numberEntry:SetNumeric(true)  -- Only allow numbers
+    numberEntry:SetText(countdownTime)
+
+    numberEntry.AllowInput = function(self, char)
+        if not tonumber(char) then
+            return true 
+        end
+    end
+
+    numberEntry.OnLoseFocus = function(self)
+        countdownTime = tonumber(self:GetValue()) or 0 
+    end
+
+    local confirmButton = vgui.Create("DButton", frame)
+    confirmButton:SetSize(80, 30)
+    confirmButton:SetPos(110, 75)
+    confirmButton:SetText("Confirm")
+
+    confirmButton.DoClick = function()
+        countdownTime = tonumber(numberEntry:GetValue()) or 0
+        numberEntry:SetText("Number has been set!")
+        numberEntry:SetTextColor(Color(5,138,0))
+        confirmButton:SetVisible(false)
+        timer.Simple(2,function() frame:Close() OptionFrame() end)
+    end
+
+end
 
 function OptionFrame()
     local frameOption = vgui.Create("DFrame")
@@ -299,7 +397,7 @@ function OptionFrame()
 
     local FillPanel = vgui.Create( "DPanel", frameOption )  
 	FillPanel:Dock(FILL)
-	FillPanel:DockPadding(0,200,0,200)
+	FillPanel:DockPadding(0,0,0,0)
 	FillPanel.Paint = function( self, w, h )  
 	draw.RoundedBox( 0, 0, 0, w, h, Color( 0,0,0,0) ) -- Draw a black box instead of the frame
 	end
@@ -323,7 +421,9 @@ function OptionFrame()
     -- Disconnect button
     local restartButton = vgui.Create("DButton", FillPanel)
     restartButton:SetText("Restart Server")
-    restartButton:Dock(FILL)
+    restartButton:Dock(TOP)
+    restartButton:SetSize(0,50)
+    restartButton:DockMargin(0,100,0,0)
     restartButton:SetTextColor(Color(245, 245, 245))  -- White text
     restartButton:SetFont("DermaLarge")
     restartButton.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
@@ -340,6 +440,40 @@ function OptionFrame()
                 LocalPlayer():ConCommand("_restart")
             end 
         end 
+    end
+
+     -- Disconnect button
+     local settingButton = vgui.Create("DButton", FillPanel)
+     settingButton:SetText("Set Image")
+     settingButton:Dock(TOP)
+     settingButton:SetSize(0,30)
+     settingButton:DockMargin(0,30,0,0)
+     settingButton:SetTextColor(Color(245, 245, 245))  -- White text
+     settingButton:SetFont("HudDefault")
+     settingButton.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
+         draw.RoundedBox( 0, 0, 0, w, h, Color( 0,34,255,187) ) -- Draw a black box instead of the frame
+     end
+
+     settingButton.DoClick = function()
+        frameOption:Close() 
+        OpenBackgroundChanger()
+    end
+
+    -- Set timer
+    local timerButton = vgui.Create("DButton", FillPanel)
+    timerButton:SetText("Set Timer")
+    timerButton:Dock(TOP)
+    timerButton:SetSize(0,30)
+    timerButton:DockMargin(0,30,0,0)
+    timerButton:SetTextColor(Color(245, 245, 245))  -- White text
+    timerButton:SetFont("HudDefault")
+    timerButton.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
+        draw.RoundedBox( 0, 0, 0, w, h, Color( 0,98,255,187) ) -- Draw a black box instead of the frame
+    end
+
+    timerButton.DoClick = function()
+        frameOption:Close() 
+        OpenSetTimer()
     end
 end 
 
