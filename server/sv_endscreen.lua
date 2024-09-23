@@ -3,6 +3,9 @@ print("sv_endscreen!!")
 util.AddNetworkString("sendMessage")
 util.AddNetworkString("receiveMessage") 
 
+util.AddNetworkString("sendOpenChat")
+util.AddNetworkString("receiveOpenChat")
+
 net.Receive ("sendMessage" , function(bits , ply ) 
     local sendMessage = net.ReadString() 
 
@@ -10,6 +13,11 @@ net.Receive ("sendMessage" , function(bits , ply )
     net.WriteString(sendMessage)
     net.Broadcast() 
 end) 
+
+net.Receive ("sendOpenChat" , function(bits , ply ) 
+    net.Start("receiveOpenChat")
+    net.Broadcast() 
+end)
 
 
 --Show the end screen when the shutdown begins
