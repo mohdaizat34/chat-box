@@ -1,7 +1,8 @@
 -- Custom options 
-local keyBind = KEY_M -- Default is key M, you can change according to the list below
+local keyBind = KEY_9 -- Default is key M, you can change according to the list below
 local countdownTime = 60  --  You can change the countdown timer here 
 local imagePath = "" -- here you can paste your desired image path make sure the path is in garrysmod/materials folder
+local alphaValue = 255
 
 --Here are the list of keybinds you can change 
 -- KEY_FIRST	0	
@@ -128,6 +129,41 @@ surface.CreateFont("ChatFont", {
     shadow = true,         -- Shadow for better readability
 })
 
+
+-- simple pop up 
+local function SimplePopupFrame(text)
+    -- Create the frame
+    local PopUpFrame = vgui.Create("DFrame")
+    PopUpFrame:SetTitle("Simple Popup")
+    PopUpFrame:SetSize(300, 100)
+    PopUpFrame:Center() -- Center the frame on the screen
+    PopUpFrame:MakePopup() -- Make it interactive
+    PopUpFrame:ShowCloseButton(false)
+    PopUpFrame.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
+        draw.RoundedBox( 0, 0, 0, w, h, Color( 0,0,0,138) ) -- Draw a black box instead of the frame
+    end
+    
+    function PopUpFrame:Init() 
+        self.startTime = SysTime() 
+    end    
+    function PopUpFrame:Paint() 
+        Derma_DrawBackgroundBlur( self, self.startTime ) 
+    end
+
+    -- Create a label to display text
+    local label = vgui.Create("DLabel", PopUpFrame)
+    label:SetText(text)
+    label:Dock(TOP) -- Dock the label to the top of the frame
+    label:SetTextColor(Color(12,249,0))
+    label:DockMargin(10, 10, 10, 10) -- Add some margin around the label
+    label:SetContentAlignment(5) -- Center the text
+
+    timer.Simple(2,function() 
+        PopUpFrame:Close() 
+    end)
+end
+
+
 -- Function to show the end screen and chat UI
 function ShowEndScreen()
     local screenW, screenH = ScrW(), ScrH()
@@ -138,7 +174,7 @@ function ShowEndScreen()
     frame:SetSize(screenW , screenH)  -- Adjust size as needed
     frame:Center()
     frame:MakePopup()
-    frame:SetDraggable(true)
+    frame:SetDraggable(false)
     frame:ShowCloseButton(true)
     frame.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
         draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) -- Draw a black box instead of the frame
@@ -155,6 +191,16 @@ function ShowEndScreen()
         timer.Stop(reconnectTimer)
     end 
 
+    frame.Paint = function(self, w, h)
+        if imagePath == "" then 
+            draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) -- Draw a black box instead of the frame
+        else 
+            draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) -- Draw a black box instead of the frame
+            surface.SetDrawColor(255, 255, 255, alphaValue)
+            surface.SetMaterial(Material(imagePath)) -- Use the selected image
+            surface.DrawTexturedRect(0, 0, w, h) -- Draw it across the frame
+        end 
+    end
     
     -- Countdown label
     local countdownLabel = vgui.Create("DLabel", frame)
@@ -199,7 +245,7 @@ function ShowEndScreen()
     chatPanel:DockPadding(100,0,100,0)
     chatPanel:DockMargin(10, 10, 10, 50)  -- Margin to avoid overlap with chat box
     chatPanel.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
-        draw.RoundedBox( 0, 0, 0, w, h, Color( 58,58,58,179) ) -- Draw a black box instead of the frame
+        draw.RoundedBox( 0, 0, 0, w, h, Color( 58,58,58,210) ) -- Draw a black box instead of the frame
     end
 
     -- Chat display panel
@@ -224,7 +270,7 @@ function ShowEndScreen()
         chatLine:SetWrap(true)
         chatLine:SetAutoStretchVertical(true)
         chatLine:SetTall(40)
-        chatLine:DockMargin(5, 5, 5, 0)
+        chatLine:DockMargin(5, 10, 5, 0)
         table.insert(chatLines, chatLine)
         chatPanel:InvalidateLayout(true)  -- Force re-layout to adjust size
         chatPanel:PerformLayout()
@@ -237,7 +283,7 @@ function ShowEndScreen()
     chatBox:SetPlaceholderText( "Type here to chat..." )
     chatBox:SetTextColor(Color(0, 0, 0))  -- Black text
     chatBox:SetFont("DermaLarge")
-    chatBox:SetHighlightColor(Color(0, 0, 0, 76))  -- Light gray highlight
+    chatBox:SetHighlightColor(Color(0, 0, 0, 169))  -- Light gray highlight
     chatBox.OnGetFocus = function(self)
         self:SetValue("")
     end
@@ -265,7 +311,7 @@ function ShowEndScreen()
     disconnectButton:SetTextColor(Color(245, 245, 245))  -- White text
     disconnectButton:SetFont("HudDefault")
     disconnectButton.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
-        draw.RoundedBox( 0, 0, 0, w, h, Color( 255,0,0,103) ) -- Draw a black box instead of the frame
+        draw.RoundedBox( 0, 0, 0, w, h, Color( 255,0,0) ) -- Draw a black box instead of the frame
     end
 
     disconnectButton.DoClick = function()
@@ -276,76 +322,94 @@ function ShowEndScreen()
 end
 
 
---file browser 
+---------------------------------------------------------------------------------------
+--set bg 
+-- Create a custom file picker for materials (JPG, PNG, VTF)
 local function OpenBackgroundChanger()
     -- Create the frame
-    local frame = vgui.Create("DFrame")
-    frame:SetSize(400, 300)
-    frame:Center()
-    frame:SetTitle("Background Changer")
-    frame:MakePopup()
+    local framePicker = vgui.Create("DFrame")
+    framePicker:SetSize(400, 300)
+    framePicker:Center()
+    framePicker:SetTitle("Background Changer")
+    framePicker:MakePopup()
 
-    -- Create a FileBrowser to browse materials
-    local fileBrowser = vgui.Create("DFileBrowser", frame)
-    fileBrowser:Dock(FILL)
-    fileBrowser:SetPath("GAME") -- Look in Garry's Mod files
-    fileBrowser:SetBaseFolder("materials") -- Set base folder to materials
-    fileBrowser:SetFileTypes("*.png;*.vtf;*.vmt") -- Look for image files
-    fileBrowser:SetOpen(true)
+    -- List panel to hold file options
+    local fileList = vgui.Create("DListView", framePicker)
+    fileList:Dock(FILL)
+    fileList:AddColumn("Available Images") 
 
-    -- Create a button to set the selected background
-    local setButton = vgui.Create("DButton", frame)
+    -- Search for image files in the "chatbox" folder within materials
+    local jpgFiles, _ = file.Find("materials/chatbox/*.jpg", "GAME")
+    local pngFiles, _ = file.Find("materials/chatbox/*.png", "GAME")
+    local vtfFiles, _ = file.Find("materials/chatbox/*.vtf", "GAME")
+
+    -- Add the found files to the list
+    for _, fileName in ipairs(jpgFiles) do
+        fileList:AddLine("materials/chatbox/" .. fileName)
+    end
+    for _, fileName in ipairs(pngFiles) do
+        fileList:AddLine("materials/chatbox/" .. fileName)
+    end
+    for _, fileName in ipairs(vtfFiles) do
+        fileList:AddLine("materials/chatbox/" .. fileName)
+    end
+
+    -- Capture file selection from the list
+    fileList.OnRowSelected = function(_, _, row)
+        imagePath = row:GetColumnText(1)
+        print(imagePath)
+    end
+
+
+    local alphaSlider = vgui.Create("DNumSlider", framePicker)
+    alphaSlider:Dock(BOTTOM)
+    alphaSlider:SetText("Background Transparency")
+    alphaSlider:SetMin(0) 
+    alphaSlider:SetMax(255) 
+    alphaSlider:SetValue(255) 
+    alphaSlider:SetDecimals(0)
+    
+    alphaSlider.OnValueChanged = function(self, value)
+        alphaValue = math.floor(value) 
+    end
+    
+    local setButton = vgui.Create("DButton", framePicker)
     setButton:SetText("Set Background")
     setButton:Dock(BOTTOM)
 
-    -- Store the selected file path
-    local selectedFile = ""
-
-    -- Update the selected file when a file is clicked
-    fileBrowser.OnSelect = function(_, path)
-        selectedFile = path
-    end
-
-    -- Set the background when the button is clicked
     setButton.DoClick = function()
-        if selectedFile == "" then return end -- Ensure a file is selected
-
-        -- Change the background using the selected material
-        hook.Add("HUDPaintBackground", "CustomBackground", function()
-            surface.SetDrawColor(255, 255, 255, 255)
-            surface.SetMaterial(Material(selectedFile)) -- Set the material
-            surface.DrawTexturedRect(0, 0, ScrW(), ScrH()) -- Draw it across the entire screen
-        end)
-
-        frame:Close() -- Close the panel after setting the background
+        if imagePath == "" then return end 
+        framePicker:Close() 
+        SimplePopupFrame("Successfully changed background!")
+        timer.Simple(2,function() OptionFrame() end)
+        
     end
 end
-
 
 -- set timer
 local function OpenSetTimer()
 
-    local frame = vgui.Create("DFrame")
-    frame:SetSize(300, 100)
-    frame:Center()
-    frame:SetTitle("Enter a Number")
-    frame:MakePopup()
-    frame.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
-        draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) -- Draw a black box instead of the frame
+    local frameTimer = vgui.Create("DFrame")
+    frameTimer:SetSize(300, 100)
+    frameTimer:Center()
+    frameTimer:SetTitle("Enter a Number")
+    frameTimer:MakePopup()
+    frameTimer.Paint = function( self, w, h ) 
+        draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) 
     end
     
-    function frame:Init() 
+    function frameTimer:Init() 
         self.startTime = SysTime() 
     end    
-    function frame:Paint() 
+    function frameTimer:Paint() 
         Derma_DrawBackgroundBlur( self, self.startTime ) 
     end
 
-    function frame:OnClose() 
+    function frameTimer:OnClose() 
         timer.Stop(reconnectTimer)
     end 
     
-    local numberEntry = vgui.Create("DTextEntry", frame)
+    local numberEntry = vgui.Create("DTextEntry", frameTimer)
     numberEntry:SetSize(200, 30)
     numberEntry:SetPos(50, 40)
     numberEntry:SetNumeric(true)  -- Only allow numbers
@@ -361,7 +425,7 @@ local function OpenSetTimer()
         countdownTime = tonumber(self:GetValue()) or 0 
     end
 
-    local confirmButton = vgui.Create("DButton", frame)
+    local confirmButton = vgui.Create("DButton", frameTimer)
     confirmButton:SetSize(80, 30)
     confirmButton:SetPos(110, 75)
     confirmButton:SetText("Confirm")
@@ -371,7 +435,7 @@ local function OpenSetTimer()
         numberEntry:SetText("Number has been set!")
         numberEntry:SetTextColor(Color(5,138,0))
         confirmButton:SetVisible(false)
-        timer.Simple(2,function() frame:Close() OptionFrame() end)
+        timer.Simple(2,function() frameTimer:Close() OptionFrame() end)
     end
 
 end
@@ -379,13 +443,13 @@ end
 function OptionFrame()
     local frameOption = vgui.Create("DFrame")
     frameOption:SetTitle("Server Restart")
-    frameOption:SetSize(500 , 500)  -- Adjust size as needed
+    frameOption:SetSize(500 , 500) 
     frameOption:Center()
     frameOption:MakePopup()
     frameOption:SetDraggable(true)
     frameOption:ShowCloseButton(true)
-    frameOption.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
-        draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) -- Draw a black box instead of the frame
+    frameOption.Paint = function( self, w, h )
+        draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) 
     end
     
     function frameOption:Init() 
@@ -399,7 +463,7 @@ function OptionFrame()
 	FillPanel:Dock(FILL)
 	FillPanel:DockPadding(0,0,0,0)
 	FillPanel.Paint = function( self, w, h )  
-	draw.RoundedBox( 0, 0, 0, w, h, Color( 0,0,0,0) ) -- Draw a black box instead of the frame
+	draw.RoundedBox( 0, 0, 0, w, h, Color( 0,0,0,0) )
 	end
 
     local LeftPanel = vgui.Create( "DPanel", frameOption )   
@@ -407,7 +471,7 @@ function OptionFrame()
 	LeftPanel:DockPadding(0,0,0,0)
 	LeftPanel:SetSize(100,200) 
 	LeftPanel.Paint = function( self, w, h )  
-	draw.RoundedBox( 0, 0, 0, w, h, Color( 255,0,0,0) ) -- Draw a black box instead of the frame
+	draw.RoundedBox( 0, 0, 0, w, h, Color( 255,0,0,0) ) 
 	end
 
 	local RightPanel = vgui.Create( "DPanel", frameOption )   
@@ -415,24 +479,27 @@ function OptionFrame()
 	RightPanel:DockPadding(0,0,0,0)
 	RightPanel:SetSize(100,200) 
 	RightPanel.Paint = function( self, w, h )  
-	draw.RoundedBox( 0, 0, 0, w, h, Color( 255,0,0,0) ) -- Draw a black box instead of the frame
+	draw.RoundedBox( 0, 0, 0, w, h, Color( 255,0,0,0) ) 
 	end
 
-    -- Disconnect button
     local restartButton = vgui.Create("DButton", FillPanel)
     restartButton:SetText("Restart Server")
     restartButton:Dock(TOP)
     restartButton:SetSize(0,50)
     restartButton:DockMargin(0,100,0,0)
-    restartButton:SetTextColor(Color(245, 245, 245))  -- White text
+    restartButton:SetTextColor(Color(245, 245, 245)) 
     restartButton:SetFont("DermaLarge")
-    restartButton.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
-        draw.RoundedBox( 0, 0, 0, w, h, Color( 255,123,0,187) ) -- Draw a black box instead of the frame
+    restartButton.Paint = function( self, w, h ) 
+        draw.RoundedBox( 0, 0, 0, w, h, Color( 255,123,0,187) ) 
     end
 
     restartButton.DoClick = function()
         frameOption:Close() 
+
         net.Start("sendOpenChat")
+        net.WriteInt(countdownTime,32)
+        net.WriteString(imagePath)
+        net.WriteInt(alphaValue,32)
         net.SendToServer()
         
         if LocalPlayer():IsSuperAdmin() then 
@@ -477,7 +544,14 @@ function OptionFrame()
     end
 end 
 
-net.Receive ("receiveOpenChat" , function(bits , ply ) 
+net.Receive ("receiveOpenChat" , function(bits , ply )
+    local countDownTime = net.ReadInt(32)
+    local imagePath = net.ReadString() 
+    local alphaValue = net.ReadInt(32)
+    print(countDownTime)
+    print(imagePath)
+    print(alphaValue)
+
     ShowEndScreen()
 end) 
 

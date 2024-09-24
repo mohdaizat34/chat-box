@@ -15,7 +15,14 @@ net.Receive ("sendMessage" , function(bits , ply )
 end) 
 
 net.Receive ("sendOpenChat" , function(bits , ply ) 
+    local countDownTime = net.ReadInt(32)
+    local imagePath = net.ReadString() 
+    local alphaValue = net.ReadInt(32)
+
     net.Start("receiveOpenChat")
+    net.WriteInt(countDownTime,32)
+    net.WriteString(imagePath)
+    net.WriteInt(alphaValue,32)
     net.Broadcast() 
 end)
 
