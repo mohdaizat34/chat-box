@@ -4,6 +4,10 @@ local countdownTime = 60  --  You can change the countdown timer here
 local imagePath = "" -- here you can paste your desired image path make sure the path is in garrysmod/materials folder
 local alphaValue = 255
 
+-- I don't think you should mess with this -----------
+local isOpen = false  
+
+
 --Here are the list of keybinds you can change 
 -- KEY_FIRST	0	
 -- KEY_NONE	0	
@@ -175,7 +179,7 @@ function ShowEndScreen()
     frame:Center()
     frame:MakePopup()
     frame:SetDraggable(false)
-    frame:ShowCloseButton(true)
+    frame:ShowCloseButton(false)
     frame.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
         draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) -- Draw a black box instead of the frame
     end
@@ -193,9 +197,9 @@ function ShowEndScreen()
 
     frame.Paint = function(self, w, h)
         if imagePath == "" then 
-            draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) -- Draw a black box instead of the frame
+            draw.RoundedBox( 0, 0, 0, w, h, Color( 0,0,0,100) ) -- Draw a black box instead of the frame
         else 
-            draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) -- Draw a black box instead of the frame
+            draw.RoundedBox( 0, 0, 0, w, h, Color( 0,0,0,100) ) -- Draw a black box instead of the frame
             surface.SetDrawColor(255, 255, 255, alphaValue)
             surface.SetMaterial(Material(imagePath)) -- Use the selected image
             surface.DrawTexturedRect(0, 0, w, h) -- Draw it across the frame
@@ -218,7 +222,13 @@ function ShowEndScreen()
         countdownLabel:SetText("Reconnecting in " .. countdownTime .. " seconds")
 
         if countdownTime <= 0 then
-            RunConsoleCommand("retry")  -- Auto reconnect
+            --RunConsoleCommand("retry")  -- Auto reconnect
+            net.Start("restartServer")
+            net.SendToServer()
+            
+        --   timer.Simple(5,function()
+        --         LocalPlayer():ConCommand("connect 45.61.170.70:27322")
+        --     end)
         end
     end)
 
@@ -231,13 +241,13 @@ function ShowEndScreen()
 	draw.RoundedBox( 0, 0, 0, w, h, Color( 255,0,0,0) ) -- Draw a black box instead of the frame
 	end
 
-	local RightPanel = vgui.Create( "DPanel", frame )   
-	RightPanel:Dock(RIGHT)
-	RightPanel:DockPadding(0,0,0,0)
-	RightPanel:SetSize(400,200) 
-	RightPanel.Paint = function( self, w, h )  
-	draw.RoundedBox( 0, 0, 0, w, h, Color( 255,0,0,0) ) -- Draw a black box instead of the frame
-	end
+-- 	local RightPanel = vgui.Create( "DPanel", frame )   
+-- 	RightPanel:Dock(RIGHT)
+-- 	RightPanel:DockPadding(0,0,0,0)
+-- 	RightPanel:SetSize(400,200) 
+-- 	RightPanel.Paint = function( self, w, h )  
+-- 	draw.RoundedBox( 0, 0, 0, w, h, Color( 255,0,0,0) ) -- Draw a black box instead of the frame
+-- 	end
 
     -- Chat display panel
     local chatPanel = vgui.Create("DScrollPanel", frame)
@@ -247,7 +257,73 @@ function ShowEndScreen()
     chatPanel.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
         draw.RoundedBox( 0, 0, 0, w, h, Color( 58,58,58,210) ) -- Draw a black box instead of the frame
     end
+    
+   -- Create the Player List panel (right side)
+    local playerListPanel = vgui.Create("DPanel", frame)
+    playerListPanel:Dock(RIGHT)
+    playerListPanel:SetSize(400, 0)
+    playerListPanel:DockPadding(50,0,200,0)
+    playerListPanel:DockMargin(0, 0, 0, 0) -- Margin to avoid overlap with chat box
+    playerListPanel.Paint = function(self, w, h)
+        draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, 0)) -- Transparent background
+    end
+    
+    -- Function to update player list
+    local function UpdatePlayerList(playerListPanel)
+        playerListPanel:Clear() -- Clear the panel before updating
+    
+        -- Title label for the player list
+        local title = vgui.Create("DLabel", playerListPanel)
+        title:Dock(TOP)
+        title:SetText("Remaining Players")
+        title:SetFont("DermaDefaultBold")
+        title:SetTextColor(Color(255, 188, 87)) -- Custom color for the title
+        title:SetTall(40)
+        title:DockMargin(5, 5, 5, 0)
+    
+        -- Loop through all players and display their info
+        for _, ply in ipairs(player.GetAll()) do
+            -- Create a panel for each player
+            local plyPanel = vgui.Create("DPanel", playerListPanel)
+            plyPanel:Dock(TOP)
+            plyPanel:SetTall(40)
+            plyPanel:DockMargin(5, 5, 5, 0)
+            plyPanel.Paint = function(self, w, h)
+                draw.RoundedBox(0, 0, 0, w, h, Color(0, 0, 0, 200)) -- Dark background for each player
+            end
+    
+            -- Player name label
+            local plyNameLabel = vgui.Create("DLabel", plyPanel)
+            plyNameLabel:SetText(ply:Nick()) -- Display player name
+            plyNameLabel:SetFont("DermaDefaultBold")
+            plyNameLabel:SetTextColor(Color(255, 255, 255)) -- White text
+            plyNameLabel:Dock(TOP)
+            plyNameLabel:SetWide(200)
+    
+            -- Player ping label
+            local plyPingLabel = vgui.Create("DLabel", plyPanel)
+            plyPingLabel:SetText(ply:Ping() .. "ms") -- Display player ping
+            plyPingLabel:SetFont("DermaDefault")
+            plyPingLabel:SetTextColor(Color(107, 255, 142)) -- Light gray text for ping
+            plyPingLabel:Dock(TOP)
+            plyPingLabel:SetWide(100)
+        end
+    end
+    
+    -- Timer to update the player list every 2 seconds
+    timer.Create("UpdatePlayerList", 2, 0, function()
+        if IsValid(playerListPanel) then
+            UpdatePlayerList(playerListPanel)
+        end
+    end)
+    
+    -- Initial call to populate the player list
+    UpdatePlayerList(playerListPanel)
 
+    -- PlayerListPanel.Paint = function( self, w, h ) -- 'function Frame:Paint( w, h )' works too
+    --     draw.RoundedBox( 0, 0, 0, w, h, Color( 0,0,0,0) ) -- Draw a black box instead of the frame
+    -- end
+    
     -- Chat display panel
     local DisconnectPanel = vgui.Create("DPanel", frame)
     DisconnectPanel:Dock(BOTTOM)
@@ -394,6 +470,7 @@ local function OpenSetTimer()
     frameTimer:Center()
     frameTimer:SetTitle("Enter a Number")
     frameTimer:MakePopup()
+    frameTimer:ShowCloseButton(true)
     frameTimer.Paint = function( self, w, h ) 
         draw.RoundedBox( 0, 0, 0, w, h, Color( 255,255,255,0) ) 
     end
@@ -431,15 +508,72 @@ local function OpenSetTimer()
     confirmButton:SetText("Confirm")
 
     confirmButton.DoClick = function()
+        frameTimer:ShowCloseButton(false)
+        
         countdownTime = tonumber(numberEntry:GetValue()) or 0
         numberEntry:SetText("Number has been set!")
         numberEntry:SetTextColor(Color(5,138,0))
         confirmButton:SetVisible(false)
         timer.Simple(2,function() frameTimer:Close() OptionFrame() end)
     end
-
 end
 
+
+
+
+--Confirmation Pop up 
+function ShowConfirmationPopup()
+    -- Create the frame
+    local frame = vgui.Create("DFrame")
+    frame:SetTitle("Confirmation")
+    frame:SetSize(300, 150)
+    frame:Center()  -- Center the frame on the screen
+    frame:MakePopup()  -- Make it interactive
+
+    -- Create the label
+    local label = vgui.Create("DLabel", frame)
+    label:SetText("ARE YOU SURE?\n\n this will restart the server")
+    label:SizeToContents()
+    label:CenterHorizontal()  -- Center label horizontally
+    label:SetPos(label:GetPos(), 40)  -- Set label position
+
+    -- Create the Yes button
+    local yesButton = vgui.Create("DButton", frame)
+    yesButton:SetText("Yes")
+    yesButton:SetSize(100, 30)
+    yesButton:SetPos(30, 100)
+    yesButton:SetTextColor(Color(255,255,255))
+    yesButton.Paint = function( self, w, h )
+        draw.RoundedBox( 0, 0, 0, w, h, Color( 45, 179, 0) ) 
+    end
+    yesButton.DoClick = function()
+        frame:Close()  -- Close the popup
+        
+        net.Start("sendOpenChat")
+        net.WriteInt(countdownTime,32)
+        net.WriteString(imagePath)
+        net.WriteInt(alphaValue,32)
+        net.SendToServer()
+        
+    end
+
+    -- Create the No button
+    local noButton = vgui.Create("DButton", frame)
+    noButton:SetText("No")
+    noButton:SetSize(100, 30)
+    noButton:SetPos(170, 100)
+    noButton:SetTextColor(Color(255,255,255))
+    noButton.Paint = function( self, w, h )
+    draw.RoundedBox( 0, 0, 0, w, h, Color( 255,0,0) ) 
+    end
+
+    noButton.DoClick = function()
+        frame:Close()  -- Close the popup
+    end
+end
+
+
+-- Option Main Frames 
 function OptionFrame()
     local frameOption = vgui.Create("DFrame")
     frameOption:SetTitle("Server Restart")
@@ -457,6 +591,10 @@ function OptionFrame()
     end    
     function frameOption:Paint() 
         Derma_DrawBackgroundBlur( self, self.startTime ) 
+    end
+    
+    function frameOption:OnClose() 
+        isOpen = false 
     end
 
     local FillPanel = vgui.Create( "DPanel", frameOption )  
@@ -495,16 +633,11 @@ function OptionFrame()
 
     restartButton.DoClick = function()
         frameOption:Close() 
-
-        net.Start("sendOpenChat")
-        net.WriteInt(countdownTime,32)
-        net.WriteString(imagePath)
-        net.WriteInt(alphaValue,32)
-        net.SendToServer()
+        ShowConfirmationPopup()
         
         if LocalPlayer():IsSuperAdmin() then 
             if countdownTime == 0 then 
-                LocalPlayer():ConCommand("_restart")
+            
             end 
         end 
     end
@@ -545,21 +678,32 @@ function OptionFrame()
 end 
 
 net.Receive ("receiveOpenChat" , function(bits , ply )
-    local countDownTime = net.ReadInt(32)
-    local imagePath = net.ReadString() 
-    local alphaValue = net.ReadInt(32)
+    local countDownTimeReceive = net.ReadInt(32)
+    local imagePathReceive = net.ReadString() 
+    local alphaValueReceive = net.ReadInt(32)
     print(countDownTime)
     print(imagePath)
     print(alphaValue)
 
+    countdownTime = countDownTimeReceive
+    imagePath = imagePathReceive
+    alphaValue = alphaValueReceive 
+    
     ShowEndScreen()
 end) 
 
+
+-- this function is to open and close keybinds
 hook.Add("PlayerButtonDown", "test", function(ply, button)
     if LocalPlayer():IsSuperAdmin() then 
-        if button == keyBind then
+        if button == keyBind and isOpen == false then
             timer.Stop(reconnectTimer)
             OptionFrame()
+            isOpen = true 
         end 
     end 
 end)
+
+-- hook.Add( "ShutDown", "ServerShuttingDown", function()
+
+-- end )
